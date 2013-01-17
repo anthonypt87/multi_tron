@@ -1,24 +1,31 @@
-var canvas = document.createElement("canvas");
-var ctx = canvas.getContext("2d");
-canvas.width = 512;
-canvas.height = 480;
-document.body.appendChild(canvas);
+var initializeCanvas = function(container) {
+	var canvas = container.createElement("canvas");
+	var ctx = canvas.getContext("2d");
+	canvas.width = 600;
+	canvas.height = 600;
+	container.body.appendChild(canvas);
+	return canvas;
+}
 
-var bgReady = false;
-var bgImage = new Image();
-bgImage.onload = function () {
-		bgReady = true;
-};
-bgImage.src = "images/background.jpg";
+var getBackground = function() {
+	var bgReady = false;
+	var bgImage = new Image();
+	bgImage.src = "images/background.jpg";
+	return bgImage;
+)
 
-var heroReady = false;
-var heroImage = new Image();
-heroImage.onload = function () {
-	heroReady = true;
-};
-heroImage.src = "images/hero.jpg";
+var getHero = function() {
+	var heroReady = false;
+	var heroImage = new Image();
+	heroImage.onload = function () {
+		heroReady = true;
+	};
+	heroImage.src = "images/hero.jpg";
+	return heroImage;
+}
 
 // Monster image
+var get_monster
 var monsterReady = false;
 var monsterImage = new Image();
 monsterImage.onload = function () {
@@ -93,7 +100,7 @@ function render() {
 	}
 
 	if (heroReady) {
-		ctx.drawImage(heroImage, hero.x, hero.y);
+		ctx.drawImage(heroImage, hero.x, hero.y, 50, 50);
 	}
 
 	if (monsterReady) {

@@ -1,130 +1,64 @@
-var initializeCanvas = function(container) {
-	var canvas = container.createElement("canvas");
-	var ctx = canvas.getContext("2d");
-	canvas.width = 600;
-	canvas.height = 600;
-	container.body.appendChild(canvas);
-	return canvas;
-}
+function Game(container) {
+	this.container = container;
 
-var getBackground = function() {
-	var bgReady = false;
-	var bgImage = new Image();
-	bgImage.src = "images/background.jpg";
-	return bgImage;
-)
+	this.canvas = function() {
+		var canvas = container.createElement("canvas");
+		canvas.id = "canvas";
+		canvas.width = 400;
+		canvas.height = 400;
+		container.body.appendChild(canvas);
+		return canvas;
+	}();
 
-var getHero = function() {
-	var heroReady = false;
-	var heroImage = new Image();
-	heroImage.onload = function () {
-		heroReady = true;
+	this.ctx = this.canvas.getContext('2d');
+
+	this.coordinateSystem = new CoordinateSystem(this.canvas, 15, 15);
+
+	this.drawGrid = function(){
+		this.ctx.beginPath();
+		for (var x = 0; x <= this.coordinateSystem.max_x; x++) {
+			var pixel_x = x * this.coordinateSystem.coordinate_x_width;
+			this.ctx.moveTo(pixel_x, 0);
+			this.ctx.lineTo(pixel_x, this.coordinateSystem.max_y * this.coordinateSystem.coordinate_y_width);
+		}
+		for (var y = 0; y <= this.coordinateSystem.max_y; y++) {
+			var pixel_y = y * this.coordinateSystem.coordinate_y_width;
+			this.ctx.moveTo(0, pixel_y);
+			this.ctx.lineTo(this.coordinateSystem.max_x * this.coordinateSystem.coordinate_x_width, pixel_y);
+		}
+		this.ctx.stroke();
 	};
-	heroImage.src = "images/hero.jpg";
-	return heroImage;
+
+	this.drawCar = function(x,y) {
+		pixelPosition = this.coordinateSystem.getPixelPosition(x, y);
+		this.ctx.fillRect(
+			pixelPosition.x - (0.5 * this.coordinateSystem.coordinate_x_width),
+			pixelPosition.y - (0.5 * this.coordinateSystem.coordinate_y_width),
+			this.coordinateSystem.coordinate_x_width,
+			this.coordinateSystem.coordinate_y_width
+		);
+	};
+
+	this.start = function(){
+		this.drawGrid();
+		this.drawCar(1,1);
+	};
+
 }
 
-// Monster image
-var get_monster
-var monsterReady = false;
-var monsterImage = new Image();
-monsterImage.onload = function () {
-	monsterReady = true;
-};
-monsterImage.src = "images/monster.gif";
+function CoordinateSystem(canvas, max_x, max_y) {
+	this.max_x = max_x;
+	this.max_y = max_y;
+	this.canvas = canvas;
+	this.coordinate_x_width = this.canvas.width / this.max_x;
+	this.coordinate_y_width = this.canvas.height / this.max_y;
+	this.getPixelPosition = function(x, y) {
+		var x_pixel_position = (x + 0.5) * this.coordinate_x_width;
+		var y_pixel_position = (y + 0.5) * this.coordinate_y_width;
+		return {'x': x_pixel_position, 'y': y_pixel_position};
+	};
+}
 
+game = new Game(document);
+game.start();
 
-var hero = {
-		speed: 256, // movement in pixels per second
-			x: 0,
-				y: 0
-};
-var monster = {
-		x: 0,
-			y: 0
-};
-var monstersCaught = 0;
-
-var keysDown = {};
-
-addEventListener("keydown", function (e) {
-		keysDown[e.keyCode] = true;
-}, false);
-
-addEventListener("keyup", function (e) {
-		delete keysDown[e.keyCode];
-}, false);
-
-// Update game objects
-function update (modifier) {
-	if (38 in keysDown) { // Player holding up
-		hero.y -= hero.speed * modifier;
-	}
-	if (40 in keysDown) { // Player holding down
-		hero.y += hero.speed * modifier;
-	}
-	if (37 in keysDown) { // Player holding left
-		hero.x -= hero.speed * modifier;
-	}
-	if (39 in keysDown) { // Player holding right
-		hero.x += hero.speed * modifier;
-	}
-
-	// Are they touching?
-	if (
-		hero.x <= (monster.x + 32)
-		&& monster.x <= (hero.x + 32)
-		&& hero.y <= (monster.y + 32)
-		&& monster.y <= (hero.y + 32)
-	) {
-		++monstersCaught;
-		reset();
-	}
-};
-
-
-// Reset the game when the player catches a monster
-function reset() {
-	hero.x = canvas.width / 2;
-	hero.y = canvas.height / 2;
-
-	// Throw the monster somewhere on the screen randomly
-	monster.x = 32 + (Math.random() * (canvas.width - 64));
-	monster.y = 32 + (Math.random() * (canvas.height - 64));
-};
-
-// Draw everything
-function render() {
-	if (bgReady) {
-		ctx.drawImage(bgImage, 0, 0);
-	}
-
-	if (heroReady) {
-		ctx.drawImage(heroImage, hero.x, hero.y, 50, 50);
-	}
-
-	if (monsterReady) {
-		ctx.drawImage(monsterImage, monster.x, monster.y);
-	}
-
-	// Score
-	ctx.fillStyle = "rgb(250, 250, 250)";
-	ctx.font = "24px Helvetica";
-	ctx.textAlign = "left";
-	ctx.textBaseline = "top";
-	ctx.fillText("Goblins caught: " + monstersCaught, 32, 32);
-};
-
-function main() {
-	var now = Date.now();
-	var delta = now - then;
-
-	update(delta / 1000);
-	render();
-
-	then = now;
-};
-
-reset();
-var then = Date.now();
-setInterval(main, 1);

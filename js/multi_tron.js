@@ -1,27 +1,69 @@
+function getRandomNumberInRange(max, min) {
+	return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 function Game(canvas) {
 	var gameState = {
-		'coordinateSystem': new CoordinateSystem(canvas, 15, 15),
-		'cars': []
+		'coordinateSystem': new CoordinateSystem(canvas, 50, 50),
+		'cars': [],
+		'foodItems': []
 	};
 	var renderer = new gameRenderer(canvas, gameState);
 	var directionReader = new DirectionReader(canvas);
-	var playerCar = new Car(new Position(1, 2), gameState.coordinateSystem);
+	var playerCar = null;
+	var makeCar = function() {
+		var x = getRandomNumberInRange(0, gameState.coordinateSystem.maxX);
+		var y = getRandomNumberInRange(0, gameState.coordinateSystem.maxY);
+		return new Car(new Position(x, y), gameState.coordinateSystem);
+	};
 
 	this.initialize = function() {
+		playerCar = makeCar();
 		gameState.cars.push(playerCar);
+		gameState.foodItems.push(makeFood());
 		renderer.render();
+	};
+
+	var makeFood = function() {
+		var x = getRandomNumberInRange(0, gameState.coordinateSystem.maxX);
+		var y = getRandomNumberInRange(0, gameState.coordinateSystem.maxY);
+		return new Food(new Position(x, y));
+	};
+
+	var handleEatFood = function() {
+		var newFooditems = [];
+		for (var foodIndex = 0; foodIndex < gameState.foodItems.length; foodIndex++) {
+			var foodItem = gameState.foodItems[foodIndex];
+			if (!foodItem.position.overlaps(playerCar.position)) {
+				newFooditems.push(foodItem);
+			} else {
+				newFooditems.push(makeFood());
+				playerCar.maxTailLength += 1;
+			}
+		}
+		gameState.foodItems = newFooditems;
 	};
 
 	this.update = function() {
 		direction = directionReader.getDirection();
 		playerCar.updatePosition(direction);
+		handleEatFood();
 		renderer.render();
 	};
+
+
+}
+
+function Food(position) {
+	this.position = position;
 }
 
 function Position(x, y) {
 	this.x = x;
 	this.y = y;
+	this.overlaps = function(position) {
+		return this.x === position.x && this.y === position.y;
+	};
 }
 
 
@@ -31,7 +73,7 @@ function Car(position, coordinateSystem) {
 	var velocity = [0, 0];
 	var that = this;
 
-	var max_tail_length = 4;
+	this.maxTailLength = 4;
 	this.tail = [];
 
 	this.updatePosition = function(direction){
@@ -39,38 +81,45 @@ function Car(position, coordinateSystem) {
 
 		var oldPosition = new Position(this.position.x, this.position.y);
 
-		var new_x = this.position.x + velocity[0];
-		if (new_x < coordinateSystem.max_x && new_x >= 0) {
-			this.position.x = new_x;
+		var newX = this.position.x + velocity[0];
+		if (newX < coordinateSystem.maxX && newX >= 0) {
+			this.position.x = newX;
 		}
 
-		var new_y = this.position.y + velocity[1];
-		if (new_y < coordinateSystem.max_y && new_y >= 0) {
-			this.position.y = new_y;
+		var newY = this.position.y + velocity[1];
+		if (newY < coordinateSystem.maxY && newY >= 0) {
+			this.position.y = newY;
 		}
 
-		updateTail(oldPosition);
+		if (!oldPosition.overlaps(this.position)) {
+			updateTail(oldPosition);
+		}
 	};
 
 	function updateVelocityUsingDirection(direction) {
-		var direction_mapping = {
+		var directionMapping = {
 			'UP': [0, -1],
 			'DOWN': [0, 1],
 			'LEFT': [-1, 0],
 			'RIGHT': [1, 0]
 		};
-		if (direction in direction_mapping) {
-			velocity = direction_mapping[direction];
+		if (direction in directionMapping && directionMapping) {
+			var newVelocity = directionMapping[direction];
+			// You can't go the opposite direction you're already facing
+			if (!(newVelocity[0] === -velocity[0] && newVelocity[1] === -velocity[1])) {
+				velocity = newVelocity;
+			}
 		}
 	}
 
 	function updateTail(oldPosition){
 		that.tail.push(oldPosition);
-		if (that.tail.length > max_tail_length) {
+		if (that.tail.length > that.maxTailLength) {
 			that.tail.shift();
 		}
 	}
 }
+
 
 function DirectionReader(container) {
 	var keyCodeToDirectionMap = {
@@ -101,26 +150,21 @@ function DirectionReader(container) {
 		}, 
 		false
 	);
-//	container.addEventListener(
-//		'keyup', 
-//		function (e) {
-//			keysDown[keyCodeToDirectionMap[e.keyCode]] = false;
-//		}, 
-//		false
-//	);
 }
+
 
 function gameRenderer(canvas, gameState) {
 
 	var ctx = canvas.getContext('2d');
 	var coordinateSystem = gameState.coordinateSystem;
-	var coordinate_x_width = canvas.width / coordinateSystem.max_x;
-	var coordinate_y_width = canvas.height / coordinateSystem.max_y;
+	var coordinate_x_width = canvas.width / coordinateSystem.maxX;
+	var coordinate_y_width = canvas.height / coordinateSystem.maxY;
 
 	this.render = function() {
 		clearCanvas();
 		drawGrid();
 		drawCars();
+		drawFoodItems();
 	};
 
 	function clearCanvas() {
@@ -129,15 +173,15 @@ function gameRenderer(canvas, gameState) {
 
 	function drawGrid() {
 		ctx.beginPath();
-		for (var x = 0; x <= coordinateSystem.max_x; x++) {
+		for (var x = 0; x <= coordinateSystem.maxX; x++) {
 			var pixel_x = x * coordinate_x_width;
 			ctx.moveTo(pixel_x, 0);
-			ctx.lineTo(pixel_x, coordinateSystem.max_y * coordinate_y_width);
+			ctx.lineTo(pixel_x, coordinateSystem.maxY * coordinate_y_width);
 		}
-		for (var y = 0; y <= coordinateSystem.max_y; y++) {
+		for (var y = 0; y <= coordinateSystem.maxY; y++) {
 			var pixel_y = y * coordinate_y_width;
 			ctx.moveTo(0, pixel_y);
-			ctx.lineTo(coordinateSystem.max_x * coordinate_x_width, pixel_y);
+			ctx.lineTo(coordinateSystem.maxX * coordinate_x_width, pixel_y);
 		}
 		ctx.stroke();
 	}
@@ -150,6 +194,14 @@ function gameRenderer(canvas, gameState) {
 			for (var boxIndex = 0; boxIndex < carAndTailPositions.length; boxIndex++) {
 				fillBox(carAndTailPositions[boxIndex]);
 			}
+		}
+	}
+
+	function drawFoodItems() {
+		var foodItems = gameState.foodItems;
+		for (var foodIndex = 0; foodIndex < foodItems.length; foodIndex++) {
+			var food = foodItems[foodIndex];
+			fillBox(food.position);
 		}
 	}
 
@@ -170,22 +222,15 @@ function gameRenderer(canvas, gameState) {
 	}
 }
 
-function CoordinateSystem(canvas, max_x, max_y) {
-	this.max_x = max_x;
-	this.max_y = max_y;
+
+function CoordinateSystem(canvas, maxX, maxY) {
+	this.maxX = maxX;
+	this.maxY = maxY;
 }
+
 
 canvas = document.getElementById('canvas');
 game = new Game(canvas);
 game.initialize();
 window.setInterval(game.update, 100);
 
-/*
-		this.canvas = canvas;
-		this.coordinate_x_width = this.canvas.width / this.max_x;
-		this.coordinate_y_width = this.canvas.height / this.max_y;
-		this.getPixelPosition = function(x, y) {
-			var x_pixel_position = (x + 0.5) * this.coordinate_x_width;
-			var y_pixel_position = (y + 0.5) * this.coordinate_y_width;
-			return {'x': x_pixel_position, 'y': y_pixel_position};
-		*/

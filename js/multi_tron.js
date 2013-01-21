@@ -1,8 +1,4 @@
-function getRandomNumberInRange(max, min) {
-	return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function Game(canvas) {
+function Game(canvas, gameFinishedCallback) {
 	var gameState = {
 		'coordinateSystem': new CoordinateSystem(canvas, 50, 50),
 		'cars': [],
@@ -15,6 +11,13 @@ function Game(canvas) {
 		var x = getRandomNumberInRange(0, gameState.coordinateSystem.maxX);
 		var y = getRandomNumberInRange(0, gameState.coordinateSystem.maxY);
 		return new Car(new Position(x, y), gameState.coordinateSystem);
+	};
+
+	var windowIntervalId = null;
+
+	this.run = function() {
+		this.initialize();
+		windowIntervalId = window.setInterval(this.update, 100);
 	};
 
 	this.initialize = function() {
@@ -49,10 +52,35 @@ function Game(canvas) {
 		playerCar.updatePosition(direction);
 		handleEatFood();
 		renderer.render();
+		handleDeathCheck();
 	};
 
+	var handleDeathCheck = function() {
+		var x = playerCar.position.x;
+		if (x >= gameState.coordinateSystem.maxX || x < 0) {
+			return endGame();
+		}
+
+		var y = playerCar.position.y;
+		if (y >= gameState.coordinateSystem.maxY || y < 0) {
+			return endGame();
+		}
+	};
+
+	var endGame = function() {
+		window.clearInterval(windowIntervalId);
+		var ctx = canvas.getContext('2d');
+		ctx.clearRect(0,0, canvas.width, canvas.height);
+		ctx.closePath();
+		gameFinishedCallback(playerCar.maxTailLength);
+	};
 
 }
+
+function getRandomNumberInRange(max, min) {
+	return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 
 function Food(position) {
 	this.position = position;
@@ -81,15 +109,8 @@ function Car(position, coordinateSystem) {
 
 		var oldPosition = new Position(this.position.x, this.position.y);
 
-		var newX = this.position.x + velocity[0];
-		if (newX < coordinateSystem.maxX && newX >= 0) {
-			this.position.x = newX;
-		}
-
-		var newY = this.position.y + velocity[1];
-		if (newY < coordinateSystem.maxY && newY >= 0) {
-			this.position.y = newY;
-		}
+		this.position.x += velocity[0];
+		this.position.y += velocity[1];
 
 		if (!oldPosition.overlaps(this.position)) {
 			updateTail(oldPosition);
@@ -228,9 +249,40 @@ function CoordinateSystem(canvas, maxX, maxY) {
 	this.maxY = maxY;
 }
 
+function GameMenu(canvas) {
+	var ctx = canvas.getContext('2d');
+	var that = this;
+
+	var listener = function (e) {
+		if (e.keyCode === 13) {
+			canvas.removeEventListener('keydown', listener, false);
+			game = new Game(canvas, that.gameFinished);
+			game.run();
+		}
+	};
+
+	this.start = function () {
+		ctx.fillText("Hit enter to start!", 10, 50);
+		canvas.addEventListener(
+			'keydown', 
+			listener,
+			false
+		);
+	};
+
+	this.gameFinished = function (score) {
+		ctx.fillText(['Nice Tail!', score, 'points. Hit start to play again!'].join(' '), 10, 50);
+		canvas.addEventListener(
+			'keydown', 
+			listener,
+			false
+		);
+	};
+
+
+}
 
 canvas = document.getElementById('canvas');
-game = new Game(canvas);
-game.initialize();
-window.setInterval(game.update, 100);
+gameMenu = new GameMenu(canvas);
+gameMenu.start();
 

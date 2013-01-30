@@ -4,7 +4,7 @@ function Game(canvas, gameFinishedCallback) {
 		'cars': [],
 		'foodItems': []
 	};
-	var renderer = new gameRenderer(canvas, gameState);
+	var renderer = new GameRenderer(canvas, gameState);
 	var directionReader = new DirectionReader(canvas);
 	var playerCar = null;
 	var makeCar = function() {
@@ -174,7 +174,7 @@ function DirectionReader(container) {
 }
 
 
-function gameRenderer(canvas, gameState) {
+function GameRenderer(canvas, gameState) {
 
 	var ctx = canvas.getContext('2d');
 	var coordinateSystem = gameState.coordinateSystem;
